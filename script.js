@@ -17,13 +17,18 @@ var CONWAY = function() {
 
 	return {
 		init : function() {
-			document.onkeydown = this.KeyCheck;     
+			document.onkeydown = this.KeyCheck;
+			document.onmouseup = this.mouse_up;
 			var canvas = document.getElementById('conway');
+			canvas.onmousedown = this.mouse_down;
+			canvas.onmousemove = this.mouse_move;
+			this.drawing = false;
 			this.width = canvas.getAttribute("width");
 			this.height = canvas.getAttribute("height");
 			this.blockSize = canvas.getAttribute('data-size') * 1;
 			this.ctx = canvas.getContext('2d');
 			this.status = "paused";
+			this.draw_mode = false;
 			this.cells = [];
 			this.create_grid();
 			this.init_populate();
@@ -31,6 +36,31 @@ var CONWAY = function() {
 			this.draw_cells();
 			this.draw_pause();
 		},
+		mouse_move : function(){
+			var x = event.offsetX
+			, y = event.offsetY;
+
+			if(CONWAY.drawing && CONWAY.draw_mode){
+				CONWAY.mouse_draw(x,y,"red",true);
+			}
+		},
+		mouse_draw : function(x,y,color,add){
+			var x_mod = x % CONWAY.blockSize
+			, y_mod = y % CONWAY.blockSize
+			, block_x = x - x_mod
+			, block_y = y - y_mod
+			, col = block_x / CONWAY.blockSize
+			, row = block_y / CONWAY.blockSize;
+
+			CONWAY.ctx.fillStyle = color; 
+			CONWAY.ctx.fillRect(block_x,block_y,CONWAY.blockSize,CONWAY.blockSize);
+			if(add) CONWAY.add_cell(col,row);
+		},
+		mouse_down : function(){ 
+			CONWAY.drawing = true;
+			if(CONWAY.draw_mode) CONWAY.mouse_draw(event.offsetX,event.offsetY,"red",true);
+		},
+		mouse_up : function(){ CONWAY.drawing = false; },
 		init_populate : function(){
 			 this.add_cells([[1,0],[2,1],[2,2],[1,2],[0,2]]); //glider
 			// this.add_cells([[10,10],[09,11],[10,11],[11,11],[09,12],[11,12],[10,13]]); //Small Exploder
@@ -38,6 +68,22 @@ var CONWAY = function() {
 			// this.add_cells([[15,10],[16,10],[17,10],[18,10],[19,10],[20,10],[21,10],[22,10],[23,10],[24,10]]); //10 Cell Row
 			 this.add_cells([[10,10],[11,10],[12,10],[13,10],[09,11],[13,11],[13,12],[09,13],[12,13]]); //Lightweight SpaceShip
 			// this.add_cells([[10,10],[11,10],[13,10],[14,10],[10,11],[11,11],[13,11],[14,11],[11,12],[13,12],[09,13],[11,13],[13,13],[15,13],[09,14],[11,14],[13,14],[15,14],[09,15],[10,15],[14,15],[15,15]]); //Tumbler
+		},
+		draw_line : function(x1, y1, x2, y2, color_line){
+		    this.ctx.strokeStyle = color_line;
+		    this.ctx.lineWidth = 1;
+		    this.ctx.beginPath();
+		    this.ctx.moveTo(x1, y1);
+		    this.ctx.lineTo(x2, y2);
+		    this.ctx.stroke();
+		},
+		draw_grid : function(){
+			for (var r = 0; r < this.num_rows; r++) {
+				this.draw_line(0,r * this.blockSize,this.width,r * this.blockSize,"grey");
+			};
+			for (var c = 0; c < this.num_columns; c++) {
+				this.draw_line(c * this.blockSize, 0,c * this.blockSize,this.height);
+			};
 		},
 		draw_cell : function(column,row){
 			this.ctx.fillStyle = "rgb(255,255,255)"; 
@@ -86,8 +132,8 @@ var CONWAY = function() {
 		frame : function(){
 			if(this.status == "playing"){
 				this.draw_board();
-				this.draw_cells();
 				this.move_cells();
+				this.draw_cells();
 				this.t = setTimeout("CONWAY.frame()",  100); //next frame
 			}
 		},
@@ -148,9 +194,28 @@ var CONWAY = function() {
 		},
 		KeyCheck : function(){
 		   var KeyID = event.keyCode;
-
 		   switch(KeyID) {
+		   	  case 68:
+		   	  	if(CONWAY.status == "playing"){
+		   	  		CONWAY.status = "paused";
+		   	  	}
+			   	  switch(CONWAY.draw_mode){
+			   	  	case true:
+						CONWAY.draw_mode = false;
+						CONWAY.draw_board();
+						CONWAY.draw_cells();
+						CONWAY.draw_pause();
+			   	  	break;
+			   	  	case false:
+						CONWAY.draw_mode = true;
+						CONWAY.draw_board();
+						CONWAY.draw_cells();
+			   	  		CONWAY.draw_grid();
+			   	  	break;
+			   	  }
+			   	  break;
 		      case 83:
+		      CONWAY.draw_mode = false;
 		      switch(CONWAY.status){
 		      	case "playing":
 		      		CONWAY.status = "paused";
